@@ -1,0 +1,48 @@
+name: Update Cohort Report
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download latest Google Sheet data
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: python scripts/download_sheet.py
+
+      - name: Generate interactive report
+        run: |
+          cd scripts
+          python generate_cohort_report.py --interactive --input ../data/cohorts_data_preprocessed.xlsx --output-dir ../public
+
+      - name: Copy report to index.html
+        run: |
+          # Find the generated interactive HTML file and copy it as index.html
+          REPORT_FILE=$(ls public/eere_50001_ready_cohort_program_update_interactive_*.html | head -1)
+          cp "$REPORT_FILE" public/index.html
+          echo "Copied $REPORT_FILE to public/index.html"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          force_orphan: true
