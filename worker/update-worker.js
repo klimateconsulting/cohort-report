@@ -6,7 +6,7 @@
  *   GITHUB_PAT  — GitHub Personal Access Token with repo/workflow scope
  */
 
-const GITHUB_OWNER = 'arianagha';
+const GITHUB_OWNER = 'klimateconsulting';
 const GITHUB_REPO = 'cohort-report';
 const WORKFLOW_FILE = 'update-report.yml';
 
