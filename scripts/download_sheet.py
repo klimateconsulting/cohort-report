@@ -23,13 +23,11 @@ def main():
     else:
         raise RuntimeError('GOOGLE_SERVICE_ACCOUNT_KEY environment variable not set')
 
-    # Use Drive API to export as xlsx
+    # Use Drive API to download the file
+    # This file is an uploaded .xlsx (not a native Google Sheet), so use get_media
     drive_service = build('drive', 'v3', credentials=creds)
 
-    request = drive_service.files().export_media(
-        fileId=SPREADSHEET_ID,
-        mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    request = drive_service.files().get_media(fileId=SPREADSHEET_ID)
 
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
