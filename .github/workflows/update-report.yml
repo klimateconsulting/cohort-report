@@ -40,6 +40,9 @@ jobs:
           cp "$REPORT_FILE" public/index.html
           echo "Copied $REPORT_FILE to public/index.html"
 
+      - name: Add CNAME for custom domain
+        run: echo "cohorts.klimateconsulting.com" > public/CNAME
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
