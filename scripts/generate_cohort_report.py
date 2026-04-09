@@ -765,6 +765,45 @@ def create_interactive_html_report(df_original, start_date, end_date):
     </div>
     <h1>50001 Ready Cohort Program Update</h1>
 
+    <!-- Fetch Latest Data Button -->
+    <div style="text-align: center; padding: 10px; background-color: #f0f0f0; border-bottom: 1px solid #ddd;">
+        <button id="fetch-btn" onclick="fetchLatestData()" style="padding: 8px 20px; font-size: 14px; background-color: #0C2E60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Fetch Latest Data
+        </button>
+        <span id="fetch-status" style="margin-left: 10px; font-size: 14px; color: #666;"></span>
+    </div>
+
+    <script>
+        function fetchLatestData() {{
+            const btn = document.getElementById('fetch-btn');
+            const status = document.getElementById('fetch-status');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            status.textContent = 'Triggering report update...';
+
+            fetch('https://cohort-update.arianagha.workers.dev', {{ method: 'POST' }})
+                .then(r => r.json())
+                .then(data => {{
+                    if (data.success) {{
+                        status.textContent = 'Update triggered! Page will refresh in ~2 minutes.';
+                        status.style.color = '#2e7d32';
+                        setTimeout(() => window.location.reload(), 120000);
+                    }} else {{
+                        status.textContent = 'Error: ' + data.message;
+                        status.style.color = '#c62828';
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }}
+                }})
+                .catch(err => {{
+                    status.textContent = 'Error: ' + err.message;
+                    status.style.color = '#c62828';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }});
+        }}
+    </script>
+
     <!-- Date Filter Controls -->
     <div class="date-filter-container">
         <label for="start-date">Start Date:</label>
