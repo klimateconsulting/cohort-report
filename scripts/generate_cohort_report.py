@@ -746,6 +746,25 @@ def create_interactive_html_report(df_original, start_date, end_date):
             font-size: 15px;
             line-height: 1.5;
         }}
+        .download-btn {{
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 18px;
+            font-size: 13px;
+            background-color: #0C2E60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }}
+        .download-btn:hover {{
+            background-color: #1a4a8a;
+        }}
+        .download-btn:disabled {{
+            opacity: 0.6;
+            cursor: not-allowed;
+        }}
         @media (max-width: 768px) {{
             #mobile-overlay {{ display: flex; }}
         }}
@@ -755,6 +774,8 @@ def create_interactive_html_report(df_original, start_date, end_date):
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Plotly JS -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- html2canvas for map screenshot -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
     <div id="mobile-overlay">
@@ -827,12 +848,14 @@ def create_interactive_html_report(df_original, start_date, end_date):
             <div class="viz-container">
                 <div id="map"></div>
             </div>
+            <button class="download-btn" onclick="downloadMap()">Download Map as PNG</button>
         </div>
         <div class="viz-wrapper">
             <h3>Timelines for Cohorts</h3>
             <div class="viz-container">
                 <div id="timeline"></div>
             </div>
+            <button class="download-btn" onclick="downloadTimeline()">Download Timeline as PNG</button>
         </div>
     </div>
 
@@ -1198,6 +1221,42 @@ def create_interactive_html_report(df_original, start_date, end_date):
 
             document.querySelector('#completed-table thead').innerHTML = thead;
             document.querySelector('#completed-table tbody').innerHTML = tbody || '<tr><td colspan="6">No completed cohorts in this date range</td></tr>';
+        }}
+
+        function downloadMap() {{
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+
+            const mapContainer = document.getElementById('map');
+
+            html2canvas(mapContainer, {{
+                useCORS: true,
+                allowTaint: true,
+                scale: 3,
+                backgroundColor: '#ffffff'
+            }}).then(canvas => {{
+                const link = document.createElement('a');
+                link.download = 'cohort_site_map.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                btn.disabled = false;
+                btn.textContent = 'Download Map as PNG';
+            }}).catch(err => {{
+                alert('Map download failed: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Download Map as PNG';
+            }});
+        }}
+
+        function downloadTimeline() {{
+            Plotly.downloadImage('timeline', {{
+                format: 'png',
+                width: 1600,
+                height: 900,
+                scale: 3,
+                filename: 'cohort_timeline'
+            }});
         }}
     </script>
 </body>
