@@ -1280,10 +1280,21 @@ def create_interactive_html_report(df_original, start_date, end_date):
                     lakecolor: '#ffffff',
                     bgcolor: '#ffffff',
                     subunitcolor: '#cccccc',
-                    countrycolor: '#cccccc'
+                    countrycolor: '#cccccc',
+                    domain: {{ x: [0, 1], y: [0, 1] }}
                 }},
-                legend: {{ title: {{ text: 'Office' }}, font: {{ size: 14 }} }},
-                margin: {{ l: 10, r: 10, t: 10, b: 10 }},
+                legend: {{
+                    title: {{ text: 'Office' }},
+                    font: {{ size: 14 }},
+                    x: 0.01,
+                    y: 0.01,
+                    xanchor: 'left',
+                    yanchor: 'bottom',
+                    bgcolor: 'rgba(255,255,255,0.8)',
+                    bordercolor: '#cccccc',
+                    borderwidth: 1
+                }},
+                margin: {{ l: 0, r: 0, t: 0, b: 0 }},
                 paper_bgcolor: '#ffffff'
             }};
 
