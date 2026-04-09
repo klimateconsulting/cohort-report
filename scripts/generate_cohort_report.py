@@ -1288,11 +1288,11 @@ def create_interactive_html_report(df_original, start_date, end_date):
                     font: {{ size: 14 }},
                     orientation: 'h',
                     x: 0.5,
-                    y: 1.0,
+                    y: 0.95,
                     xanchor: 'center',
                     yanchor: 'bottom'
                 }},
-                margin: {{ l: 0, r: 0, t: 30, b: 0 }},
+                margin: {{ l: 0, r: 0, t: 0, b: 0 }},
                 paper_bgcolor: '#ffffff'
             }};
 
@@ -1307,7 +1307,7 @@ def create_interactive_html_report(df_original, start_date, end_date):
                 return Plotly.downloadImage(tmpDiv, {{
                     format: 'png',
                     width: 1200,
-                    height: 1200,
+                    height: 900,
                     scale: 3,
                     filename: 'cohort_site_map'
                 }});
