@@ -774,8 +774,6 @@ def create_interactive_html_report(df_original, start_date, end_date):
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Plotly JS -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <!-- html2canvas for map screenshot -->
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
     <div id="mobile-overlay">
@@ -955,6 +953,7 @@ def create_interactive_html_report(df_original, start_date, end_date):
             document.getElementById('filtered-count').textContent = filteredData.length;
 
             // Update all visualizations
+            currentFilteredData = filteredData;
             updateMap(filteredData);
             updateTimeline(filteredData);
             updateSummaryTable(filteredData);
@@ -1223,27 +1222,94 @@ def create_interactive_html_report(df_original, start_date, end_date):
             document.querySelector('#completed-table tbody').innerHTML = tbody || '<tr><td colspan="6">No completed cohorts in this date range</td></tr>';
         }}
 
+        // Store current filtered data for map download
+        let currentFilteredData = [];
+
         function downloadMap() {{
             const btn = event.target;
             btn.disabled = true;
             btn.textContent = 'Generating...';
 
-            const mapContainer = document.getElementById('map');
+            // Aggregate locations from current filtered data
+            const locationMap = {{}};
+            currentFilteredData.forEach(row => {{
+                const key = `${{row.Office}}|${{row.City}}|${{row.State}}|${{row.Latitude}}|${{row.Longitude}}`;
+                if (!locationMap[key]) {{
+                    locationMap[key] = {{
+                        office: row.Office,
+                        city: row.City,
+                        state: row.State,
+                        lat: row.Latitude,
+                        lng: row.Longitude,
+                        count: 0
+                    }};
+                }}
+                locationMap[key].count++;
+            }});
 
-            html2canvas(mapContainer, {{
-                useCORS: true,
-                allowTaint: true,
-                scale: 3,
-                backgroundColor: '#ffffff'
-            }}).then(canvas => {{
-                const link = document.createElement('a');
-                link.download = 'cohort_site_map.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+            // Group by office for separate traces (legend entries)
+            const officeGroups = {{}};
+            Object.values(locationMap).forEach(loc => {{
+                if (!loc.lat || !loc.lng) return;
+                if (!officeGroups[loc.office]) officeGroups[loc.office] = [];
+                officeGroups[loc.office].push(loc);
+            }});
+
+            const traces = Object.entries(officeGroups).map(([office, locs]) => ({{
+                type: 'scattergeo',
+                lat: locs.map(l => l.lat),
+                lon: locs.map(l => l.lng),
+                text: locs.map(l => `${{l.city}}, ${{l.state}} (${{l.count}})`),
+                name: office,
+                marker: {{
+                    size: locs.map(l => 8 + l.count * 2),
+                    color: colorMapping[office] || 'gray',
+                    opacity: 0.8,
+                    line: {{ width: 1, color: 'white' }}
+                }},
+                hoverinfo: 'text'
+            }}));
+
+            const layout = {{
+                geo: {{
+                    scope: 'usa',
+                    projection: {{ type: 'albers usa' }},
+                    showland: true,
+                    landcolor: '#f0f0f0',
+                    showlakes: true,
+                    lakecolor: '#ffffff',
+                    bgcolor: '#ffffff',
+                    subunitcolor: '#cccccc',
+                    countrycolor: '#cccccc'
+                }},
+                legend: {{ title: {{ text: 'Office' }}, font: {{ size: 14 }} }},
+                margin: {{ l: 10, r: 10, t: 10, b: 10 }},
+                paper_bgcolor: '#ffffff'
+            }};
+
+            // Render to a hidden div, then download
+            const tmpDiv = document.createElement('div');
+            tmpDiv.id = 'map-export-tmp';
+            tmpDiv.style.position = 'absolute';
+            tmpDiv.style.left = '-9999px';
+            document.body.appendChild(tmpDiv);
+
+            Plotly.newPlot(tmpDiv, traces, layout).then(() => {{
+                return Plotly.downloadImage(tmpDiv, {{
+                    format: 'png',
+                    width: 1200,
+                    height: 900,
+                    scale: 3,
+                    filename: 'cohort_site_map'
+                }});
+            }}).then(() => {{
+                Plotly.purge(tmpDiv);
+                tmpDiv.remove();
                 btn.disabled = false;
                 btn.textContent = 'Download Map as PNG';
             }}).catch(err => {{
                 alert('Map download failed: ' + err.message);
+                tmpDiv.remove();
                 btn.disabled = false;
                 btn.textContent = 'Download Map as PNG';
             }});
