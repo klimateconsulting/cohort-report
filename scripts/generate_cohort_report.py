@@ -1284,17 +1284,15 @@ def create_interactive_html_report(df_original, start_date, end_date):
                     domain: {{ x: [0, 1], y: [0, 1] }}
                 }},
                 legend: {{
-                    title: {{ text: 'Office' }},
+                    title: {{ text: 'Office:', side: 'left' }},
                     font: {{ size: 14 }},
-                    x: 0.01,
-                    y: 0.01,
-                    xanchor: 'left',
-                    yanchor: 'bottom',
-                    bgcolor: 'rgba(255,255,255,0.8)',
-                    bordercolor: '#cccccc',
-                    borderwidth: 1
+                    orientation: 'h',
+                    x: 0.5,
+                    y: 1.0,
+                    xanchor: 'center',
+                    yanchor: 'bottom'
                 }},
-                margin: {{ l: 0, r: 0, t: 0, b: 0 }},
+                margin: {{ l: 0, r: 0, t: 30, b: 0 }},
                 paper_bgcolor: '#ffffff'
             }};
 
