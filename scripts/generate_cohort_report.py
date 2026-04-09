@@ -625,19 +625,6 @@ def create_interactive_html_report(df_original, start_date, end_date):
         .date-filter-container button:hover {{
             background-color: #7da844;
         }}
-        #update-btn {{
-            background-color: #0C2E60;
-            margin-left: 30px;
-        }}
-        #update-btn:hover {{
-            background-color: #1a4a8a;
-        }}
-        #update-status {{
-            display: inline-block;
-            margin-left: 10px;
-            font-size: 14px;
-            color: #333;
-        }}
         #date-range-display {{
             text-align: center;
             font-size: 18px;
@@ -729,6 +716,39 @@ def create_interactive_html_report(df_original, start_date, end_date):
             margin-right: 8px;
             border: 1px solid #999;
         }}
+
+        /* Mobile overlay */
+        #mobile-overlay {{
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 30px;
+        }}
+        #mobile-overlay .mobile-message {{
+            background: white;
+            border-radius: 12px;
+            padding: 40px 30px;
+            max-width: 360px;
+        }}
+        #mobile-overlay .mobile-message h2 {{
+            color: #333;
+            margin: 0 0 16px 0;
+            font-size: 20px;
+        }}
+        #mobile-overlay .mobile-message p {{
+            color: #666;
+            margin: 0;
+            font-size: 15px;
+            line-height: 1.5;
+        }}
+        @media (max-width: 768px) {{
+            #mobile-overlay {{ display: flex; }}
+        }}
     </style>
 
     <!-- Leaflet JS -->
@@ -737,6 +757,12 @@ def create_interactive_html_report(df_original, start_date, end_date):
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
+    <div id="mobile-overlay">
+        <div class="mobile-message">
+            <h2>Desktop Recommended</h2>
+            <p>This dashboard contains interactive charts and maps that are best viewed on a desktop or laptop computer. Please open this page on a larger screen for the full experience.</p>
+        </div>
+    </div>
     <h1>50001 Ready Cohort Program Update</h1>
 
     <!-- Date Filter Controls -->
@@ -748,9 +774,6 @@ def create_interactive_html_report(df_original, start_date, end_date):
         <input type="date" id="end-date" value="{end_date.strftime('%Y-%m-%d')}">
 
         <button onclick="applyDateFilter()">Apply Filter</button>
-
-        <button id="update-btn" onclick="fetchLatestData()">Fetch Latest Data</button>
-        <span id="update-status"></span>
     </div>
 
     <div id="date-range-display">
@@ -791,35 +814,6 @@ def create_interactive_html_report(df_original, start_date, end_date):
     </div>
 
     <script>
-        // Worker URL for triggering updates
-        const WORKER_URL = 'https://cohort-update.arianagha.workers.dev';
-
-        async function fetchLatestData() {{
-            const btn = document.getElementById('update-btn');
-            const status = document.getElementById('update-status');
-            btn.disabled = true;
-            btn.textContent = 'Updating...';
-            status.textContent = '';
-
-            try {{
-                const response = await fetch(WORKER_URL, {{ method: 'POST' }});
-                const data = await response.json();
-                if (data.success) {{
-                    status.textContent = 'Update triggered! Page will refresh with new data in ~2 minutes.';
-                    status.style.color = '#185E25';
-                }} else {{
-                    status.textContent = 'Error: ' + data.message;
-                    status.style.color = '#cc0000';
-                }}
-            }} catch (err) {{
-                status.textContent = 'Failed to trigger update: ' + err.message;
-                status.style.color = '#cc0000';
-            }}
-
-            btn.disabled = false;
-            btn.textContent = 'Fetch Latest Data';
-        }}
-
         // Embedded data
         const rawData = {data_json};
         const colorMapping = {color_mapping_json};
