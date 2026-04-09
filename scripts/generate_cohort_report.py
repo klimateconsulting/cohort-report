@@ -1298,7 +1298,7 @@ def create_interactive_html_report(df_original, start_date, end_date):
                 return Plotly.downloadImage(tmpDiv, {{
                     format: 'png',
                     width: 1200,
-                    height: 900,
+                    height: 1200,
                     scale: 3,
                     filename: 'cohort_site_map'
                 }});
@@ -1318,8 +1318,8 @@ def create_interactive_html_report(df_original, start_date, end_date):
         function downloadTimeline() {{
             Plotly.downloadImage('timeline', {{
                 format: 'png',
-                width: 1600,
-                height: 900,
+                width: 1200,
+                height: 1200,
                 scale: 3,
                 filename: 'cohort_timeline'
             }});
