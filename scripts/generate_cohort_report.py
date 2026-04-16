@@ -717,6 +717,30 @@ def create_interactive_html_report(df_original, start_date, end_date):
             border: 1px solid #999;
         }}
 
+        .office-checkbox {{
+            display: inline-flex;
+            align-items: center;
+            margin: 2px 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }}
+        .office-checkbox input {{
+            margin-right: 4px;
+        }}
+        .office-color {{
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 4px;
+            border: 1px solid #999;
+        }}
+        .office-filter-label {{
+            font-weight: bold;
+            font-size: 13px;
+            margin-right: 6px;
+        }}
+
         /* Mobile overlay */
         #mobile-overlay {{
             display: none;
@@ -831,6 +855,13 @@ def create_interactive_html_report(df_original, start_date, end_date):
         <label for="end-date">End Date:</label>
         <input type="date" id="end-date" value="{end_date.strftime('%Y-%m-%d')}">
 
+        <label for="impl-filter">Site Type:</label>
+        <select id="impl-filter" style="padding: 8px 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; margin-right: 20px;">
+            <option value="all">All Sites</option>
+            <option value="yes">Implementation Only</option>
+            <option value="no">Test Sites Only</option>
+        </select>
+
         <button onclick="applyDateFilter()">Apply Filter</button>
     </div>
 
@@ -846,6 +877,7 @@ def create_interactive_html_report(df_original, start_date, end_date):
             <div class="viz-container">
                 <div id="map"></div>
             </div>
+            <div id="office-filter" style="margin-top: 8px; text-align: center;"></div>
             <button class="download-btn" onclick="downloadMap()">Download Map as PNG</button>
         </div>
         <div class="viz-wrapper">
@@ -885,6 +917,7 @@ def create_interactive_html_report(df_original, start_date, end_date):
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {{
             initializeMap();
+            initializeOfficeFilter();
             applyDateFilter();
         }});
 
@@ -909,6 +942,30 @@ def create_interactive_html_report(df_original, start_date, end_date):
                 return div;
             }};
             legend.addTo(map);
+        }}
+
+        function initializeOfficeFilter() {{
+            const uniqueOffices = [...new Set(rawData.map(r => r.Office).filter(Boolean))].sort();
+            const container = document.getElementById('office-filter');
+            container.innerHTML = '<span class="office-filter-label">Offices:</span>';
+            uniqueOffices.forEach(office => {{
+                const color = colorMapping[office] || 'gray';
+                const label = document.createElement('label');
+                label.className = 'office-checkbox';
+                label.innerHTML = `<input type="checkbox" value="${{office}}" checked onchange="updateMapOnly()"><span class="office-color" style="background:${{color}}"></span>${{office}}`;
+                container.appendChild(label);
+            }});
+        }}
+
+        function getVisibleOffices() {{
+            const checkboxes = document.querySelectorAll('#office-filter input[type="checkbox"]');
+            const visible = new Set();
+            checkboxes.forEach(cb => {{ if (cb.checked) visible.add(cb.value); }});
+            return visible;
+        }}
+
+        function updateMapOnly() {{
+            updateMap(currentFilteredData);
         }}
 
         function parseDate(dateStr) {{
@@ -944,10 +1001,18 @@ def create_interactive_html_report(df_original, start_date, end_date):
             document.getElementById('display-start').textContent = formatDate(startDate);
             document.getElementById('display-end').textContent = formatDate(endDate);
 
-            // Filter data: Planned End Date >= startDate
+            // Get implementation filter
+            const implFilter = document.getElementById('impl-filter').value;
+
+            // Filter data: Planned End Date >= startDate + Implementation filter
             const filteredData = rawData.filter(row => {{
                 const plannedEnd = parseDate(row['Planned End Date']);
-                return plannedEnd && plannedEnd >= startDate;
+                if (!plannedEnd || plannedEnd < startDate) return false;
+
+                if (implFilter === 'yes' && row.Implementation !== 'Yes') return false;
+                if (implFilter === 'no' && row.Implementation !== 'No') return false;
+
+                return true;
             }});
 
             document.getElementById('filtered-count').textContent = filteredData.length;
@@ -963,9 +1028,13 @@ def create_interactive_html_report(df_original, start_date, end_date):
         function updateMap(data) {{
             markersLayer.clearLayers();
 
+            // Apply office filter
+            const visibleOffices = getVisibleOffices();
+            const mapData = data.filter(r => visibleOffices.has(r.Office));
+
             // Aggregate by location
             const locationMap = {{}};
-            data.forEach(row => {{
+            mapData.forEach(row => {{
                 const key = `${{row.Office}}|${{row.City}}|${{row.State}}|${{row.COUNTRY}}|${{row.Latitude}}|${{row.Longitude}}`;
                 if (!locationMap[key]) {{
                     locationMap[key] = {{
@@ -1230,9 +1299,13 @@ def create_interactive_html_report(df_original, start_date, end_date):
             btn.disabled = true;
             btn.textContent = 'Generating...';
 
-            // Aggregate locations from current filtered data
+            // Apply office filter to download data
+            const visibleOffices = getVisibleOffices();
+            const downloadData = currentFilteredData.filter(r => visibleOffices.has(r.Office));
+
+            // Aggregate locations from filtered data
             const locationMap = {{}};
-            currentFilteredData.forEach(row => {{
+            downloadData.forEach(row => {{
                 const key = `${{row.Office}}|${{row.City}}|${{row.State}}|${{row.Latitude}}|${{row.Longitude}}`;
                 if (!locationMap[key]) {{
                     locationMap[key] = {{
@@ -1271,6 +1344,7 @@ def create_interactive_html_report(df_original, start_date, end_date):
             }}));
 
             const layout = {{
+                showlegend: true,
                 geo: {{
                     scope: 'usa',
                     projection: {{ type: 'albers usa' }},
