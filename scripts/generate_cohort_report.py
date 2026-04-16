@@ -859,7 +859,7 @@ def create_interactive_html_report(df_original, start_date, end_date):
         <select id="impl-filter" style="padding: 8px 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; margin-right: 20px;">
             <option value="all">All Sites</option>
             <option value="yes">Implementation Only</option>
-            <option value="no">Test Sites Only</option>
+            <option value="no">Training Sites Only</option>
         </select>
 
         <button onclick="applyDateFilter()">Apply Filter</button>
