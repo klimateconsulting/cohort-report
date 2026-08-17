@@ -1144,19 +1144,31 @@ def create_interactive_html_report(df_original, start_date, end_date):
 
             const plotData = Object.values(traces);
 
-            const layout = {{
-                title: 'Cohort Timelines by Office',
-                barmode: 'overlay',
-                xaxis: {{ type: 'date' }},
-                yaxis: {{ automargin: true }},
-                legend: {{ title: {{ text: 'Office' }} }},
-                margin: {{ l: 200 }},
-                autosize: true
-            }};
+            const layout = buildTimelineLayout(TIMELINE_FONT.screen);
 
             const config = {{ responsive: true }};
 
             Plotly.newPlot('timeline', plotData, layout, config);
+        }}
+
+        // Font sizes for the timeline chart: on-screen vs. PNG export.
+        // Export uses larger fonts so axis labels stay legible when the
+        // image is shrunk to sit beside the map in a report.
+        const TIMELINE_FONT = {{
+            screen: {{ tick: 15, title: 18, legend: 14, nticks: 0, marginR: 80 }},
+            export: {{ tick: 26, title: 30, legend: 24, nticks: 6, marginR: 120 }}
+        }};
+
+        function buildTimelineLayout(f) {{
+            return {{
+                title: {{ text: 'Cohort Timelines by Office', font: {{ size: f.title }} }},
+                barmode: 'overlay',
+                xaxis: {{ type: 'date', tickfont: {{ size: f.tick }}, nticks: f.nticks, tickangle: 0, automargin: true }},
+                yaxis: {{ automargin: true, tickfont: {{ size: f.tick }} }},
+                legend: {{ title: {{ text: 'Office', font: {{ size: f.legend }} }}, font: {{ size: f.legend }} }},
+                margin: {{ l: 200, r: f.marginR }},
+                autosize: true
+            }};
         }}
 
         function updateSummaryTable(data) {{
@@ -1399,12 +1411,27 @@ def create_interactive_html_report(df_original, start_date, end_date):
         }}
 
         function downloadTimeline() {{
-            Plotly.downloadImage('timeline', {{
-                format: 'png',
-                width: 1200,
-                height: 1200,
-                scale: 3,
-                filename: 'cohort_timeline'
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+
+            const el = document.getElementById('timeline');
+            // Temporarily enlarge fonts for export, then restore on-screen sizes
+            Plotly.relayout(el, buildTimelineLayout(TIMELINE_FONT.export)).then(() => {{
+                return Plotly.downloadImage(el, {{
+                    format: 'png',
+                    width: 1200,
+                    height: 1200,
+                    scale: 3,
+                    filename: 'cohort_timeline'
+                }});
+            }}).catch(err => {{
+                alert('Timeline download failed: ' + err.message);
+            }}).then(() => {{
+                return Plotly.relayout(el, buildTimelineLayout(TIMELINE_FONT.screen));
+            }}).then(() => {{
+                btn.disabled = false;
+                btn.textContent = 'Download Timeline as PNG';
             }});
         }}
     </script>
