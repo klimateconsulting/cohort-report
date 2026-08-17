@@ -1144,7 +1144,15 @@ def create_interactive_html_report(df_original, start_date, end_date):
 
             const plotData = Object.values(traces);
 
-            const layout = buildTimelineLayout(TIMELINE_FONT.screen);
+            timelineBarCount = cohorts.length;
+            const el = document.getElementById('timeline');
+            const sizing = timelineSizing(timelineBarCount, TIMELINE_FONT.screen, el.parentElement.clientWidth);
+            const layout = buildTimelineLayout(sizing);
+
+            // Let the panel grow taller than square when there are many bars,
+            // so every bar keeps a readable y-axis label.
+            el.parentElement.style.aspectRatio = 'auto';
+            el.parentElement.style.height = sizing.height + 'px';
 
             const config = {{ responsive: true }};
 
@@ -1154,19 +1162,53 @@ def create_interactive_html_report(df_original, start_date, end_date):
         // Font sizes for the timeline chart: on-screen vs. PNG export.
         // Export uses larger fonts so axis labels stay legible when the
         // image is shrunk to sit beside the map in a report.
+        //
+        // Sizing rule: each bar row needs ~1.7x the tick font size in vertical
+        // space for its label to render. The chart first grows taller (up to
+        // maxHeight) to keep the preferred font; only if it still doesn't fit
+        // does the font shrink (never below minTick). All y labels are forced
+        // (dtick: 1) so Plotly never silently drops every other label.
         const TIMELINE_FONT = {{
-            screen: {{ tick: 15, title: 18, legend: 14, nticks: 0, marginR: 80 }},
-            export: {{ tick: 26, title: 30, legend: 24, nticks: 6, marginR: 120 }}
+            screen: {{ tick: 15, minTick: 11, title: 18, legend: 14, nticks: 0, marginR: 80,
+                       minHeight: 0, maxHeight: 1400, chrome: 120 }},
+            export: {{ tick: 26, minTick: 16, title: 30, legend: 24, nticks: 6, marginR: 120,
+                       minHeight: 1200, maxHeight: 2400, chrome: 260 }}
         }};
+        const ROW_FACTOR = 1.7;   // px of row height needed per px of tick font
+        let timelineBarCount = 0;
+
+        function timelineSizing(nBars, f, minHeightOverride) {{
+            const minH = Math.max(f.minHeight, minHeightOverride || 0);
+            const n = Math.max(nBars, 1);
+            // Height needed at preferred font
+            let tick = f.tick;
+            let height = Math.ceil(n * tick * ROW_FACTOR + f.chrome);
+            if (height > f.maxHeight) {{
+                // Too many bars: shrink font to fit within maxHeight
+                tick = Math.max(f.minTick, Math.floor((f.maxHeight - f.chrome) / (n * ROW_FACTOR)));
+                height = f.maxHeight;
+            }}
+            height = Math.max(height, minH);
+            const scale = tick / f.tick;
+            return {{
+                tick: tick,
+                title: Math.max(12, Math.round(f.title * Math.max(scale, 0.8))),
+                legend: Math.max(11, Math.round(f.legend * Math.max(scale, 0.8))),
+                nticks: f.nticks,
+                marginR: f.marginR,
+                height: height
+            }};
+        }}
 
         function buildTimelineLayout(f) {{
             return {{
                 title: {{ text: 'Cohort Timelines by Office', font: {{ size: f.title }} }},
                 barmode: 'overlay',
                 xaxis: {{ type: 'date', tickfont: {{ size: f.tick }}, nticks: f.nticks, tickangle: 0, automargin: true }},
-                yaxis: {{ automargin: true, tickfont: {{ size: f.tick }} }},
+                yaxis: {{ automargin: true, tickfont: {{ size: f.tick }}, dtick: 1 }},
                 legend: {{ title: {{ text: 'Office', font: {{ size: f.legend }} }}, font: {{ size: f.legend }} }},
                 margin: {{ l: 200, r: f.marginR }},
+                height: f.height,
                 autosize: true
             }};
         }}
@@ -1416,19 +1458,21 @@ def create_interactive_html_report(df_original, start_date, end_date):
             btn.textContent = 'Generating...';
 
             const el = document.getElementById('timeline');
+            const exportSizing = timelineSizing(timelineBarCount, TIMELINE_FONT.export);
+            const screenSizing = timelineSizing(timelineBarCount, TIMELINE_FONT.screen, el.parentElement.clientWidth);
             // Temporarily enlarge fonts for export, then restore on-screen sizes
-            Plotly.relayout(el, buildTimelineLayout(TIMELINE_FONT.export)).then(() => {{
+            Plotly.relayout(el, buildTimelineLayout(exportSizing)).then(() => {{
                 return Plotly.downloadImage(el, {{
                     format: 'png',
                     width: 1200,
-                    height: 1200,
+                    height: exportSizing.height,
                     scale: 3,
                     filename: 'cohort_timeline'
                 }});
             }}).catch(err => {{
                 alert('Timeline download failed: ' + err.message);
             }}).then(() => {{
-                return Plotly.relayout(el, buildTimelineLayout(TIMELINE_FONT.screen));
+                return Plotly.relayout(el, buildTimelineLayout(screenSizing));
             }}).then(() => {{
                 btn.disabled = false;
                 btn.textContent = 'Download Timeline as PNG';
